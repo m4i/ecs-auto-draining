@@ -1,0 +1,53 @@
+linters:
+  enable:
+    # default: enabled
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    # default: disabled
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godox
+    - gofmt
+    - goimports
+    - golint
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - lll
+    - maligned
+    - misspell
+    - nakedret
+    - prealloc
+    - rowserrcheck
+    - scopelint
+    - stylecheck
+    - unconvert
+    - unparam
+    - whitespace
+  disable:
+    # default: disabled
+    - interfacer
+    - wsl
+
+linters-settings:
+  golint:
+    min-confidence: 0.3 # default: 0.8
+  lll:
+    line-length: 120 # default: 120

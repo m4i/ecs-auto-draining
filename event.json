@@ -1,0 +1,19 @@
+{
+  "version": "0",
+  "id": "40b61ef4-9205-6677-4884-c62c034b844f",
+  "detail-type": "EC2 Instance-terminate Lifecycle Action",
+  "source": "aws.autoscaling",
+  "account": "012345678901",
+  "time": "2017-10-07T06:32:17Z",
+  "region": "ap-northeast-1",
+  "resources": [
+    "arn:aws:autoscaling:ap-northeast-1:012345678901:autoScalingGroup:ea0fb62f-c7f1-42ca-925a-591d8748d223:autoScalingGroupName/as-web-3-AutoScalingGroup-Z51WIJU9317R"
+  ],
+  "detail": {
+    "LifecycleActionToken": "f8e45bb0-2d36-45b7-bf19-05e48a8b5797",
+    "AutoScalingGroupName": "as-web-3-AutoScalingGroup-Z51WIJU9317R",
+    "LifecycleHookName": "as-web-3-TerminateHook-KUWJ1D3WFYV1",
+    "EC2InstanceId": "i-1f211438a102fdc47",
+    "LifecycleTransition": "autoscaling:EC2_INSTANCE_TERMINATING"
+  }
+}

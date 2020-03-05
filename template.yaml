@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: ecs-auto-draining
+      Runtime: go1.x
+      Timeout: 60
+      Tracing: Active
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - autoscaling:CompleteLifecycleAction
+                - autoscaling:RecordLifecycleActionHeartbeat
+                - ec2:DescribeInstanceAttribute
+                - ecs:DescribeContainerInstances
+                - ecs:DescribeTasks
+                - ecs:ListContainerInstances
+                - ecs:ListTasks
+                - ecs:UpdateContainerInstancesState
+              Resource: "*"
+      Environment:
+        Variables:
+          VERBOSE: "true"
+
+  FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Function}
+      RetentionInDays: 365
+
+  # This key is used as a prefix for the state machine physical ID instead of a stack name.
+  ECSAutoDraining:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt ECSAutoDrainingRole.Arn
+      DefinitionString: !Sub |
+        {
+          "TimeoutSeconds": 7200,
+          "StartAt": "Function",
+          "States": {
+            "Function": {
+              "Type": "Task",
+              "Resource": "${Function.Arn}",
+              "Next": "Wait?"
+            },
+            "Wait?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.detail.Wait",
+                  "BooleanEquals": true,
+                  "Next": "Wait"
+                },
+                {
+                  "Variable": "$.detail.Wait",
+                  "BooleanEquals": false,
+                  "Next": "Succeeded"
+                }
+              ],
+              "Default": "Failed"
+            },
+            "Wait": {
+              "Type": "Wait",
+              "Seconds": 30,
+              "Next": "Function"
+            },
+            "Succeeded": {
+              "Type": "Succeed"
+            },
+            "Failed": {
+              "Type": "Fail",
+              "Error": "InvalidResult",
+              "Cause": "`detail.Wait` key does not exist"
+            }
+          }
+        }
+
+  ECSAutoDrainingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: states.ap-northeast-1.amazonaws.com
+      Policies:
+        - PolicyName: inline
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt Function.Arn
+
+  Rule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source: [aws.autoscaling]
+        detail-type: [EC2 Instance-terminate Lifecycle Action]
+      Targets:
+        - Id: !GetAtt ECSAutoDraining.Name
+          Arn: !Ref ECSAutoDraining
+          RoleArn: !GetAtt RuleRole.Arn
+
+  RuleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: events.amazonaws.com
+      Policies:
+        - PolicyName: inline
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              Effect: Allow
+              Action: states:StartExecution
+              Resource: !Ref ECSAutoDraining
